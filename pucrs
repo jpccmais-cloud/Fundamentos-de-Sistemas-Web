@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minimercado São José - Sua compra na palma da mão</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+  <style>
+    :root {
+      --cor-principal: #2c5530;
+      --cor-secundaria: #4a7c59;
+      --cor-destaque: #ff6b35;
+      --cor-fundo: #f8f9fa;
+      --cor-texto: #333;
+    }
+    body { font-family: Arial, sans-serif; background: var(--cor-fundo); color: var(--cor-texto); }
+    .header-custom { background: linear-gradient(135deg, var(--cor-principal), var(--cor-secundaria)); color: #fff; padding: 1rem; }
+    .logo-text { font-size: 1.8rem; font-weight: bold; }
+    .produto-card { border-radius: 15px; box-shadow: 0 3px 15px rgba(0,0,0,0.1); margin-bottom: 1.5rem; }
+    .produto-emoji { font-size: 3rem; }
+    .produto-preco { color: var(--cor-destaque); font-weight: bold; }
+    .btn-custom { background: linear-gradient(135deg, var(--cor-principal), var(--cor-secundaria)); color: #fff; border: none; border-radius: 25px; }
+    .btn-destaque { background: linear-gradient(135deg, var(--cor-destaque), #ff8c42); color: #fff; border: none; border-radius: 25px; }
+    .carrinho-flutuante { position: fixed; top: 50%; right: 20px; transform: translateY(-50%); background: var(--cor-destaque); color: #fff; border-radius: 50px; padding: 15px 20px; cursor: pointer; z-index: 1050; }
+    .badge-carrinho { position: absolute; top: -8px; right: -8px; background: #dc3545; color: #fff; border-radius: 50%; width: 25px; height: 25px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+    .high-contrast { background: #000 !important; color: #fff !important; }
+    .high-contrast .btn-custom { background: #fff; color: #000; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header-custom">
+    <div class="container d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center">
+        <i class="fas fa-store fa-2x me-3" alt="Ícone da loja do Minimercado São José"></i>
+        <div>
+          <h1 class="logo-text mb-0">Minimercado São José</h1>
+          <p class="mb-0">Qualidade e praticidade para você</p>
+        </div>
+      </div>
+      <div>
+        <button class="btn btn-outline-light me-2" onclick="toggleContraste()" aria-label="Ativar modo de alto contraste para melhor acessibilidade">
+          <i class="fas fa-adjust" alt="Ícone para alternar contraste"></i> Contraste
+        </button>
+        <button class="btn btn-outline-light" onclick="mostrarCadastro()" aria-label="Abrir formulário de cadastro de cliente">
+          <i class="fas fa-user-plus" alt="Ícone para cadastro de usuário"></i> Cadastrar
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Carrinho Flutuante -->
+  <div class="carrinho-flutuante" onclick="mostrarCarrinho()" role="button" tabindex="0" aria-label="Abrir carrinho de compras - total de itens no carrinho">
+    <i class="fas fa-shopping-cart" alt="Ícone do carrinho de compras"></i>
+    <span class="badge-carrinho" id="badge-carrinho">0</span>
+  </div>
+
+  <!-- Container Principal -->
+  <div class="container my-4">
+    <h2 class="text-center mb-4">Nossos Produtos</h2>
+    <div class="row" id="grid-produtos" role="main" aria-label="Catálogo de produtos do minimercado"></div>
+  </div>
+
+  <!-- Modal Carrinho -->
+  <div class="modal fade" id="modalCarrinho" tabindex="-1" aria-labelledby="modalCarrinhoLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg"><div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalCarrinhoLabel">
+          <i class="fas fa-shopping-cart me-2" alt="Ícone do carrinho"></i>Meu Carrinho
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar carrinho de compras"></button>
+      </div>
+      <div class="modal-body">
+        <div id="itens-carrinho" role="region" aria-label="Itens no carrinho de compras"></div>
+        <div id="total-carrinho" class="mt-3 pt-3 border-top" style="display:none;">
+          <div class="d-flex justify-content-between align-items-center">
+            <h5>Total: <span id="valor-total">R$ 0,00</span></h5>
+            <button class="btn btn-destaque" onclick="mostrarAgendamento()" aria-label="Finalizar compra e escolher forma de entrega">Finalizar Compra</button>
+          </div>
+        </div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- Modal Cadastro -->
+  <div class="modal fade" id="modalCadastro" tabindex="-1" aria-labelledby="modalCadastroLabel" aria-hidden="true">
+    <div class="modal-dialog"><div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalCadastroLabel">
+          <i class="fas fa-user-plus me-2" alt="Ícone de cadastro"></i>Cadastro de Cliente
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar formulário de cadastro"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formCadastro" novalidate>
+          <div class="mb-3">
+            <label for="nome" class="form-label">Nome Completo *</label>
+            <input type="text" class="form-control" id="nome" name="nome" placeholder="Digite seu nome completo" required aria-describedby="nomeHelp">
+            <div id="nomeHelp" class="form-text">Informe seu nome completo como aparece no documento</div>
+          </div>
+          <div class="mb-3">
+            <label for="cpf" class="form-label">CPF *</label>
+            <input type="text" class="form-control" id="cpf" name="cpf" placeholder="000.000.000-00" required maxlength="14" aria-describedby="cpfHelp">
+            <div id="cpfHelp" class="form-text">Digite apenas os números do CPF</div>
+          </div>
+          <div class="mb-3">
+            <label for="email" class="form-label">E-mail *</label>
+            <input type="email" class="form-control" id="email" name="email" placeholder="seu@email.com" required aria-describedby="emailHelp">
+            <div id="emailHelp" class="form-text">Utilizaremos para enviar confirmações do pedido</div>
+          </div>
+          <div class="mb-3">
+            <label for="telefone" class="form-label">Telefone *</label>
+            <input type="tel" class="form-control" id="telefone" name="telefone" placeholder="(00) 00000-0000" required aria-describedby="telefoneHelp">
+            <div id="telefoneHelp" class="form-text">Para contato sobre entregas</div>
+          </div>
+          <div class="mb-3">
+            <fieldset>
+              <legend class="form-label">Sexo</legend>
+              <div class="d-flex gap-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="sexo" id="masculino" value="M">
+                  <label class="form-check-label" for="masculino">Masculino</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="sexo" id="feminino" value="F">
+                  <label class="form-check-label" for="feminino">Feminino</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="sexo" id="outro" value="O">
+                  <label class="form-check-label" for="outro">Outro</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="sexo" id="nao-informar" value="N" checked>
+                  <label class="form-check-label" for="nao-informar">Prefiro não informar</label>
+                </div>
+              </div>
+            </fieldset>
+          </div>
+          <div class="mb-3">
+            <label for="endereco" class="form-label">Endereço Completo *</label>
+            <textarea class="form-control" id="endereco" name="endereco" rows="3" placeholder="Rua, número, complemento, bairro, cidade, CEP" required aria-describedby="enderecoHelp"></textarea>
+            <div id="enderecoHelp" class="form-text">Endereço completo para entrega dos produtos</div>
+          </div>
+          <div class="mb-3">
+            <label for="idade" class="form-label">Idade</label>
+            <input type="number" class="form-control" id="idade" name="idade" min="16" max="120" placeholder="18" aria-describedby="idadeHelp">
+            <div id="idadeHelp" class="form-text">Campo opcional, apenas para fins estatísticos</div>
+          </div>
+          <div class="mb-3">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="newsletter" name="newsletter" value="sim">
+              <label class="form-check-label" for="newsletter">
+                Quero receber ofertas e novidades por e-mail
+              </label>
+            </div>
+          </div>
+          <div class="form-check mb-3">
+            <input type="checkbox" class="form-check-input" id="termos" name="termos" required>
+            <label class="form-check-label" for="termos">Aceito os termos de uso e política de privacidade *</label>
+          </div>
+          <button type="submit" class="btn btn-custom">
+            <i class="fas fa-save me-2" alt="Ícone salvar"></i>Cadastrar
+          </button>
+        </form>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- Modal Agendamento -->
+  <div class="modal fade" id="modalAgendamento" tabindex="-1" aria-labelledby="modalAgendamentoLabel" aria-hidden="true">
+    <div class="modal-dialog"><div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="modalAgendamentoLabel">
+          <i class="fas fa-calendar-alt me-2" alt="Ícone de calendário"></i>Agendamento de Entrega/Retirada
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar formulário de agendamento"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formAgendamento">
+          <div class="mb-4">
+            <fieldset>
+              <legend class="form-label">Tipo de Serviço *</legend>
+              <div class="row">
+                <div class="col-md-6">
+                  <div class="card">
+                    <div class="card-body text-center">
+                      <div class="form-check">
+                        <input class="form-check-input" type="radio" name="tipoServico" id="retirada" value="retirada">
+                        <label class="form-check-label w-100" for="retirada">
+                          <i class="fas fa-store fa-3x text-primary mb-2 d-block" alt="Ícone de loja para retirada"></i>
+                          <h6>Retirada no Local</h6>
+                          <p class="small text-muted">Retire seus produtos diretamente em nossa loja</p>
+                          <span class="badge bg-success">GRÁTIS</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="card">
+                    <div class="card-body text-center">
+                      <div class="form-check">
+                        <input class="form-check-input" type="radio" name="tipoServico" id="entrega" value="entrega">
+                        <label class="form-check-label w-100" for="entrega">
+                          <i class="fas fa-truck fa-3x text-warning mb-2 d-block" alt="Ícone de caminhão para entrega"></i>
+                          <h6>Tele-entrega</h6>
+                          <p class="small text-muted">Receba em casa com segurança e comodidade</p>
+                          <span class="badge bg-warning text-dark">R$ 5,00</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </fieldset>
+          </div>
+          <div class="mb-3">
+            <label for="dataAgendamento" class="form-label">Data de Agendamento *</label>
+            <input type="date" class="form-control" id="dataAgendamento" name="dataAgendamento" required aria-describedby="dataHelp">
+            <div id="dataHelp" class="form-text">Escolha uma data a partir de hoje para retirada ou entrega</div>
+          </div>
+          <div class="mb-3">
+            <label for="horarioAgendamento" class="form-label">Horário *</label>
+            <select class="form-select" id="horarioAgendamento" name="horarioAgendamento" required aria-describedby="horarioHelp">
+              <option value="">Selecione um horário</option>
+              <option value="08:00">08:00 - 09:00</option>
+              <option value="09:00">09:00 - 10:00</option>
+              <option value="10:00">10:00 - 11:00</option>
+              <option value="11:00">11:00 - 12:00</option>
+              <option value="14:00">14:00 - 15:00</option>
+              <option value="15:00">15:00 - 16:00</option>
+              <option value="16:00">16:00 - 17:00</option>
+              <option value="17:00">17:00 - 18:00</option>
+            </select>
+            <div id="horarioHelp" class="form-text">Horários de funcionamento: 8h às 18h (fechado das 12h às 14h)</div>
+          </div>
+          <div class="mb-3">
+            <label for="observacoes" class="form-label">Observações</label>
+            <textarea id="observacoes" name="observacoes" class="form-control" rows="3" placeholder="Informações adicionais sobre o pedido (opcional)" aria-describedby="observacoesHelp"></textarea>
+            <div id="observacoesHelp" class="form-text">Campo opcional para informações especiais sobre a entrega</div>
+          </div>
+          <button type="submit" class="btn btn-destaque">
+            <i class="fas fa-check me-2" alt="Ícone de confirmação"></i>Confirmar Pedido
+          </button>
+        </form>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // Variáveis globais
+    let carrinho = [];
+    let contrasteAtivo = false;
+
+    // Base de produtos do minimercado - 3 categorias com pelo menos 2 produtos cada
+    const produtos = [
+      // Frutas e Verduras
+      {id:1, nome:"Banana Nanica", preco:4.99, categoria:"frutas-verduras", emoji:"🍌", descricao:"Banana doce e fresca, ideal para vitaminas", estoque: 20},
+      {id:2, nome:"Maçã Gala", preco:7.50, categoria:"frutas-verduras", emoji:"🍎", descricao:"Maçã crocante e saborosa, rica em fibras", estoque: 15},
+      {id:3, nome:"Tomate Italiano", preco:8.90, categoria:"frutas-verduras", emoji:"🍅", descricao:"Tomate fresquinho para saladas e molhos", estoque: 12},
+      
+      // Produtos Alimentícios  
+      {id:4, nome:"Arroz Tipo 1 5kg", preco:22.90, categoria:"alimenticios", emoji:"🍚", descricao:"Arroz branco de qualidade superior", estoque: 30},
+      {id:5, nome:"Feijão Preto 1kg", preco:8.50, categoria:"alimenticios", emoji:"🫘", descricao:"Feijão preto selecionado", estoque: 25},
+      {id:6, nome:"Macarrão Espaguete", preco:4.20, categoria:"alimenticios", emoji:"🍝", descricao:"Massa italiana premium 500g", estoque: 18},
+      
+      // Higiene e Limpeza
+      {id:7, nome:"Detergente Neutro", preco:2.99, categoria:"higiene-limpeza", emoji:"🧴", descricao:"Detergente concentrado 500ml", estoque: 40},
+      {id:8, nome:"Sabonete Líquido", preco:5.50, categoria:"higiene-limpeza", emoji:"🧼", descricao:"Sabonete antibacteriano 250ml", estoque: 35}
+    ];
+
+    // Inicialização da página
+    document.addEventListener('DOMContentLoaded', () => {
+      carregarProdutos();
+      configurarDataMinima();
+      configurarFormularios();
+      configurarAcessibilidade();
+      console.log('Sistema do Minimercado São José carregado com sucesso!');
+    });
+
+    // Carrega produtos na tela
+    function carregarProdutos() {
+      const grid = document.getElementById("grid-produtos");
+      grid.innerHTML = "";
+      
+      produtos.forEach(produto => {
+        grid.innerHTML += `
+          <div class="col-md-6 col-lg-4">
+            <div class="card produto-card p-3 text-center">
+              <div class="produto-emoji" role="img" aria-label="${produto.descricao}">${produto.emoji}</div>
+              <h5>${produto.nome}</h5>
+              <p class="text-muted">${produto.descricao}</p>
+              <div class="produto-preco mb-2">R$ ${produto.preco.toFixed(2)}</div>
+              <small class="text-muted mb-3 d-block">
+                <i class="fas fa-box" alt="Ícone de estoque"></i> ${produto.estoque} unidades disponíveis
+              </small>
+              <button class="btn btn-custom w-100" onclick="adicionarAoCarrinho(${produto.id})" 
+                      aria-label="Adicionar ${produto.nome} ao carrinho de compras">
+                <i class="fas fa-plus me-1" alt="Ícone adicionar"></i>Adicionar ao Carrinho
+              </button>
+            </div>
+          </div>`;
+      });
+    }
+
+    // Adiciona produto ao carrinho
+    function adicionarAoCarrinho(id) {
+      const produto = produtos.find(p => p.id === id);
+      const item = carrinho.find(i => i.id === id);
+      
+      if (item) {
+        if (item.qtd >= produto.estoque) {
+          alert('Não há mais estoque disponível para este produto!');
+          return;
+        }
+        item.qtd++;
+      } else {
+        carrinho.push({...produto, qtd: 1});
+      }
+      
+      atualizarCarrinho();
+      mostrarNotificacao(`${produto.nome} adicionado ao carrinho!`);
+    }
+
+    // Atualiza display do carrinho
+    function atualizarCarrinho() {
+      const badge = document.getElementById("badge-carrinho");
+      const totalItens = carrinho.reduce((sum, item) => sum + item.qtd, 0);
+      badge.textContent = totalItens;
+      badge.style.display = totalItens > 0 ? 'flex' : 'none';
+      
+      const container = document.getElementById("itens-carrinho");
+      
+      if (carrinho.length === 0) {
+        container.innerHTML = `
+          <div class="text-center text-muted py-4">
+            <i class="fas fa-shopping-cart fa-3x mb-3" alt="Carrinho vazio"></i>
+            <p>Seu carrinho está vazio</p>
+            <p class="small">Adicione produtos para começar suas compras!</p>
+          </div>`;
+        document.getElementById("total-carrinho").style.display = "none";
+        return;
+      }
+      
+      let total = 0;
+      let html = "";
+      
+      carrinho.forEach(item => {
+        const subtotal = item.preco * item.qtd;
+        total += subtotal;
+        html += `
+          <div class="d-flex justify-content-between align-items-center border-bottom py-2">
+            <div>
+              <span role="img" aria-label="${item.nome}">${item.emoji}</span>
+              <strong> ${item.qtd}x ${item.nome}</strong>
+              <br><small class="text-muted">R$ ${item.preco.toFixed(2)} cada</small>
+            </div>
+            <div class="text-end">
+              <div class="fw-bold">R$ ${subtotal.toFixed(2)}</div>
+              <button class="btn btn-sm btn-outline-danger" onclick="removerDoCarrinho(${item.id})" 
+                      aria-label="Remover ${item.nome} do carrinho">
+                <i class="fas fa-trash" alt="Ícone remover"></i>
+              </button>
+            </div>
+          </div>`;
+      });
+      
+      container.innerHTML = html;
+      document.getElementById("valor-total").textContent = "R$ " + total.toFixed(2);
+      document.getElementById("total-carrinho").style.display = "block";
+    }
+
+    // Remove produto do carrinho
+    function removerDoCarrinho(id) {
+      const index = carrinho.findIndex(item => item.id === id);
+      if (index > -1) {
+        const produto = carrinho[index];
+        carrinho.splice(index, 1);
+        atualizarCarrinho();
+        mostrarNotificacao(`${produto.nome} removido do carrinho!`);
+      }
+    }
+
+    // Exibe modals
+    function mostrarCarrinho() { 
+      new bootstrap.Modal("#modalCarrinho").show(); 
+    }
+    
+    function mostrarCadastro() { 
+      new bootstrap.Modal("#modalCadastro").show(); 
+    }
+    
+    function mostrarAgendamento() { 
+      if (carrinho.length === 0) {
+        alert('Adicione produtos ao carrinho antes de finalizar a compra!');
+        return;
+      }
+      new bootstrap.Modal("#modalAgendamento").show(); 
+    }
+
+    // Configura data mínima para agendamento
+    function configurarDataMinima() {
+      const hoje = new Date().toISOString().split("T")[0];
+      document.getElementById("dataAgendamento").min = hoje;
+    }
+
+    // Configura eventos dos formulários
+    function configurarFormularios() {
+      // Formulário de cadastro
+      document.getElementById("formCadastro").addEventListener("submit", function(e) {
+        e.preventDefault();
+        
+        if (validarCadastro()) {
+          alert("Cadastro realizado com sucesso!");
+          bootstrap.Modal.getInstance(document.getElementById("modalCadastro")).hide();
+          document.getElementById("formCadastro").reset();
+        }
+      });
+      
+      // Formulário de agendamento  
+      document.getElementById("formAgendamento").addEventListener("submit", function(e) {
+        e.preventDefault();
+        
+        if (validarAgendamento()) {
+          alert("Pedido confirmado! Você receberá uma confirmação em breve.");
+          carrinho = [];
+          atualizarCarrinho();
+          bootstrap.Modal.getInstance(document.getElementById("modalAgendamento")).hide();
+          document.getElementById("formAgendamento").reset();
+        }
+      });
+
+      // Máscaras para campos
+      document.getElementById("cpf").addEventListener("input", function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+        value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        e.target.value = value;
+      });
+
+      document.getElementById("telefone").addEventListener("input", function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        value = value.replace(/(\d{2})(\d)/, '($1) $2');
+        value = value.replace(/(\d{5})(\d)/, '$1-$2');
+        e.target.value = value;
+      });
+    }
+
+    // Validação do formulário de cadastro
+    function validarCadastro() {
+      const nome = document.getElementById("nome").value.trim();
+      const cpf = document.getElementById("cpf").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const telefone = document.getElementById("telefone").value.trim();
+      const endereco = document.getElementById("endereco").value.trim();
+      const termos = document.getElementById("termos").checked;
+
+      if (!nome || !cpf || !email || !telefone || !endereco) {
+        alert("Por favor, preencha todos os campos obrigatórios!");
+        return false;
+      }
+
+      if (!termos) {
+        alert("Você deve aceitar os termos para continuar!");
+        return false;
+      }
+
+      // Validação básica de email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        alert("Por favor, informe um e-mail válido!");
+        return false;
+      }
+
+      return true;
+    }
+
+    // Validação do formulário de agendamento
+    function validarAgendamento() {
+      const tipoServico = document.querySelector('input[name="tipoServico"]:checked');
+      const data = document.getElementById("dataAgendamento").value;
+      const horario = document.getElementById("horarioAgendamento").value;
+
+      if (!tipoServico) {
+        alert("Por favor, escolha o tipo de serviço!");
+        return false;
+      }
+
+      if (!data) {
+        alert("Por favor, selecione uma data!");
+        return false;
+      }
+
+      if (!horario) {
+        alert("Por favor, selecione um horário!");
+        return false;
+      }
+
+      return true;
+    }
+
+    // Toggle contraste alto (acessibilidade)
+    function toggleContraste() {
+      contrasteAtivo = !contrasteAtivo;
+      document.body.classList.toggle("high-contrast");
+      
+      if (contrasteAtivo) {
+        anunciarMudanca('Modo de alto contraste ativado');
+      } else {
+        anunciarMudanca('Modo de alto contraste desativado');
+      }
+    }
+
+    // Configurações de acessibilidade
+    function configurarAcessibilidade() {
+      // Navegação por teclado
+      document.addEventListener('keydown', function(event) {
+        // Esc para fechar modais
+        if (event.key === 'Escape') {
+          const modaisAbertos = document.querySelectorAll('.modal.show');
+          modaisAbertos.forEach(modal => {
+            const modalInstance = bootstrap.Modal.getInstance(modal);
+            if (modalInstance) modalInstance.hide();
+          });
+        }
+        
+        // Alt + C para alternar contraste
+        if (event.altKey && event.key === 'c') {
+          event.preventDefault();
+          toggleContraste();
+        }
+        
+        // Alt + S para mostrar carrinho
+        if (event.altKey && event.key === 's') {
+          event.preventDefault();
+          mostrarCarrinho();
+        }
+      });
+
+      // Tornar carrinho acessível por teclado
+      const carrinhoBtn = document.querySelector('.carrinho-flutuante');
+      carrinhoBtn.addEventListener('keypress', function(event) {
+        if (event.key === 'Enter') {
+          mostrarCarrinho();
+        }
+      });
+
+      // Configurar descrições detalhadas para emojis (acessibilidade)
+      setTimeout(() => {
+        const descricoesDetalhadas = {
+          '🍌': 'Ícone de banana amarela madura, representando frutas frescas e nutritivas',
+          '🍎': 'Ícone de maçã vermelha brilhante, símbolo de saúde e frescor',
+          '🍅': 'Ícone de tomate vermelho maduro, ideal para saladas e culinária',
+          '🍚': 'Ícone de tigela de arroz branco cozido, alimento básico nutritivo',
+          '🫘': 'Ícone de grãos de feijão, fonte de proteína vegetal',
+          '🍝': 'Ícone de massa espaguete, representando carboidratos e praticidade',
+          '🧴': 'Ícone de frasco de detergente, produto de limpeza doméstica',
+          '🧼': 'Ícone de sabonete, produto de higiene pessoal'
+        };
+        
+        document.querySelectorAll('.produto-emoji').forEach(emoji => {
+          const texto = emoji.textContent.trim();
+          if (descricoesDetalhadas[texto]) {
+            emoji.setAttribute('title', descricoesDetalhadas[texto]);
+          }
+        });
+      }, 500);
+    }
+
+    // Exibe notificação temporária
+    function mostrarNotificacao(mensagem) {
+      const notificacao = document.createElement('div');
+      notificacao.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #28a745;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 5px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        z-index: 9999;
+        max-width: 300px;
+        font-weight: 500;
+      `;
+      notificacao.textContent = mensagem;
+      
+      document.body.appendChild(notificacao);
+      anunciarMudanca(mensagem);
+      
+      setTimeout(() => {
+        notificacao.remove();
+      }, 3000);
+    }
+
+    // Anuncia mudanças para leitores de tela
+    function anunciarMudanca(mensagem) {
+      const anunciador = document.createElement('div');
+      anunciador.setAttribute('aria-live', 'polite');
+      anunciador.setAttribute('aria-atomic', 'true');
+      anunciador.className = 'sr-only';
+      anunciador.textContent = mensagem;
+      
+      document.body.appendChild(anunciador);
+      
+      setTimeout(() => {
+        anunciador.remove();
+      }, 1000);
+    }
+
+    // Função temporal para demonstrar JavaScript dinâmico
+    setInterval(function() {
+      // Atualizar timestamp se necessário
+      console.log('Sistema ativo há: ' + Math.floor(Date.now() / 1000) + ' segundos');
+    }, 10000);
+  </script>
+</body>
+</html>
